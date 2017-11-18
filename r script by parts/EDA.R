@@ -1,5 +1,5 @@
 setwd("/Users/MandyZhang/Desktop/DATS 6101 - group project 2/")
-voice = read.csv("voice.csv",stringsAsFactors = FALSE)
+voice = read.csv("data/voice.csv",stringsAsFactors = FALSE)
 str(voice)
 
 # use group_by function to count in gender
@@ -48,7 +48,7 @@ ggplot(voice, aes(x=modindx, y=meanfreq, group=label)) + geom_point(aes(colour =
   theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
         axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
         axis.title.y = element_text(face = "bold", size = 15),
-        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1))  +  scale_color_hue(l=38, c=65)
 dev.off()
 
 pdf("../figures/Skew vs. Kurtosis.pdf", width = 16.5, height = 9.5)
@@ -57,7 +57,7 @@ ggplot(voice, aes(skew, kurt, group=label)) + geom_line(aes(colour = label), siz
   theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
         axis.title.x = element_text(face = "bold",size = 15, vjust = 1),
         axis.title.y = element_text(face = "bold", size = 15),
-        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() + scale_color_hue(l=38, c=65)
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1))  + scale_color_hue(l=38, c=65)
 dev.off()
 
 # we can plot more ggplot about two variables comparision after feature selection.
