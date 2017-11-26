@@ -1,4 +1,4 @@
-setwd("/Users/MandyZhang/Desktop/DATS 6101 - group project 2/")
+setwd("/Users/MandyZhang/Desktop/DATS6101-group-project-2/")
 voice = read.csv("data/voice.csv",stringsAsFactors = FALSE)
 str(voice)
 
