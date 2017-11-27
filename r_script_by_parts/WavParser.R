@@ -1,7 +1,7 @@
-# packages <- c('tuneR', 'seewave', 'gbm')
-# if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
-#   install.packages(setdiff(packages, rownames(installed.packages())))  
-# }
+# install.packages("tuneR")
+# install.packages("seewave")
+# install.packages("gbm")
+
 suppressMessages(library(tuneR))
 suppressMessages(library(seewave))
 suppressMessages(library(gbm))
@@ -22,44 +22,6 @@ specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
                                                                         "start", "end") %in% colnames(X))], collapse=", "), "column(s) not found in data frame"))
   } else  stop("X is not a data frame")
   
-  #if there are NAs in start or end stop
-  if(any(is.na(c(end, start)))) stop("NAs found in start and/or end")  
-  
-  #if end or start are not numeric stop
-  if(all(class(end) != "numeric" & class(start) != "numeric")) stop("'end' and 'selec' must be numeric")
-  
-  #if any start higher than end stop
-  if(any(end - start<0)) stop(paste("The start is higher than the end in", length(which(end - start<0)), "case(s)"))  
-  
-  #if any selections longer than 20 secs stop
-  if(any(end - start>20)) stop(paste(length(which(end - start>20)), "selection(s) longer than 20 sec"))  
-  #options( show.error.messages = TRUE)
-  
-  #if bp is not vector or length!=2 stop
-  if(!is.vector(bp)) stop("'bp' must be a numeric vector of length 2") else{
-    if(!length(bp) == 2) stop("'bp' must be a numeric vector of length 2")}
-  
-  #return warning if not all sound files were found
-  fs <- list.files(path = getwd(), pattern = ".wav$", ignore.case = TRUE)
-  if(length(unique(sound.files[(sound.files %in% fs)])) != length(unique(sound.files))) 
-    cat(paste(length(unique(sound.files))-length(unique(sound.files[(sound.files %in% fs)])), 
-              ".wav file(s) not found"))
-  
-  #count number of sound files in working directory and if 0 stop
-  d <- which(sound.files %in% fs) 
-  if(length(d) == 0){
-    stop("The .wav files are not in the working directory")
-  }  else {
-    start <- start[d]
-    end <- end[d]
-    selec <- selec[d]
-    sound.files <- sound.files[d]
-  }
-  
-  # If parallel is not numeric
-  if(!is.numeric(parallel)) stop("'parallel' must be a numeric vector of length 1") 
-  if(any(!(parallel %% 1 == 0),parallel < 1)) stop("'parallel' should be a positive integer")
-  
   # If parallel was called
   if(parallel > 1)
   { options(warn = -1)
@@ -70,8 +32,6 @@ specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
           lapp <- pbapply::pblapply} else lapp <- function(X, FUN) parallel::mclapply(X, FUN, mc.cores = parallel)} else lapp <- pbapply::pblapply
   
   options(warn = 0)
-  
-  wave <- NULL
   
   #if(parallel == 1) cat("Measuring acoustic parameters:")
   x <- as.data.frame(lapp(1:length(start), function(i) { 
@@ -125,8 +85,6 @@ specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
     }
     if(mindom==maxdom) modindx<-0 else modindx <- mean(changes, na.rm = T)/dfrange
     
-    wave <<- r
-    
     #save results
     return(c(duration, meanfreq, sd, median, Q25, Q75, IQR, skew, kurt, sp.ent, sfm, mode, 
              centroid, peakf, meanfun, minfun, maxfun, meandom, mindom, maxdom, dfrange, modindx))
@@ -140,5 +98,5 @@ specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
   colnames(x)[1:2] <- c("sound.files", "selec")
   rownames(x) <- c(1:nrow(x))
   
-  return(list(acoustics = x, wave = wave))
+  return(list(acoustics = x))
 }

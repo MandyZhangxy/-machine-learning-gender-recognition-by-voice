@@ -1,9 +1,9 @@
 # packages <- c('tuneR', 'seewave', 'gbm', 'xgboost')
 # if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
-#   install.packages(setdiff(packages, rownames(installed.packages())))  
+#   install.packages(setdiff(packages, rownames(installed.packages())))
 # }
-# install.packages("pbapply", repos = "https://cran.rstudio.com/bin/macosx/mavericks/contrib/3.3/pbapply_1.3-3.tgz")
-# install.packages("fftw", repos = 'https://cran.rstudio.com/bin/macosx/mavericks/contrib/3.3/fftw_1.0-4.tgz')
+#install.packages("pbapply")
+#install.packages("fftw")
 options(warn=-1)
 setwd("/Users/jahuang/mandyproject/machine-learning-gender-recognition-by-voice")
 
