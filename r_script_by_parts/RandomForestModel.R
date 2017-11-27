@@ -1,10 +1,12 @@
 install.packages("caTools")
 install.packages("caret")
+install.packages("e1071")
+install.packages("pROC")
 install.packages("randomForest", dependencies = FALSE)
 library(randomForest)
 
 # loading data
-setwd("/Users/MandyZhang/Desktop/DATS6101-group-project-2/data/")
+setwd("/Users/jahuang/mandyproject/machine-learning-gender-recognition-by-voice/data")
 scaled_voice = read.csv("../data/scaled_voice.csv")
 head(scaled_voice)
 str(scaled_voice)
@@ -125,6 +127,10 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
         axis.title.y = element_text(face = "bold", size = 15))
 dev.off()
 
+### Save Training Model For Later
+rfModel = trainingmodel;
+save(rfModel, file = "../models/rfModel.rda");
+
 ### Demo of recognition during presentation:
 # sample is the data recorded in class.
 # Want to know if the voice is male or female.
@@ -139,6 +145,8 @@ sample.pred
 
 
 which(test[,8] == "female")
+
+
 
 
 
