@@ -22,7 +22,8 @@ checkValidArg(fileArg)
 # Run Recognition
 load("models/rfModel.rda")
 filepath = unlist(strsplit(fileArg, "="))[2]
-cat(paste("Running Recognition on: ", filepath))
+cat(paste("\nRunning Recognition on: ", filepath))
+cat("\n\nData:\n")
 source("scripts/WavParser.R")
 data <- data.frame()
 row <- data.frame(filepath, 0, 0, 10)
@@ -37,8 +38,9 @@ selected = c( "meanfun","IQR","Q25","sd", "sp.ent","sfm", "meanfreq", "label" )
 acoustics = result$acoustics
 sample = acoustics[ , names(acoustics) %in% selected]
 
+print(sample)
 sample.pred = predict(rfModel,sample, type = "response")
-cat("\n\nVoice Recognition Results: \n")
+cat("\n\nVoice Recognition Result: \n")
 cat(as.character(sample.pred))
 cat("\n\n")
 
