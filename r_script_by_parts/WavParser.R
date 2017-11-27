@@ -1,14 +1,13 @@
-packages <- c('tuneR', 'seewave', 'gbm')
-if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
-  install.packages(setdiff(packages, rownames(installed.packages())))  
-}
-
-library(tuneR)
-library(seewave)
-library(gbm)
-library(xgboost)
-library(randomForest)
-library(e1071)
+# packages <- c('tuneR', 'seewave', 'gbm')
+# if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
+#   install.packages(setdiff(packages, rownames(installed.packages())))  
+# }
+suppressMessages(library(tuneR))
+suppressMessages(library(seewave))
+suppressMessages(library(gbm))
+suppressMessages(library(xgboost))
+suppressMessages(library(randomForest))
+suppressMessages(library(e1071))
 
 specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
   # To use parallel processing: library(devtools), install_github('nathanvan/parallelsugar')
@@ -34,7 +33,7 @@ specan3 <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 1){
   
   #if any selections longer than 20 secs stop
   if(any(end - start>20)) stop(paste(length(which(end - start>20)), "selection(s) longer than 20 sec"))  
-  options( show.error.messages = TRUE)
+  #options( show.error.messages = TRUE)
   
   #if bp is not vector or length!=2 stop
   if(!is.vector(bp)) stop("'bp' must be a numeric vector of length 2") else{
