@@ -5,7 +5,7 @@
 #install.packages("pbapply")
 #install.packages("fftw")
 options(warn=-1)
-setwd("/Users/jahuang/mandyproject/machine-learning-gender-recognition-by-voice")
+setwd("/Users/MandyZhang/Desktop/DATS6101-group-project-2")
 
 # Function Definitions
 checkValidArg <- function(arg) {
@@ -23,7 +23,7 @@ checkValidArg(fileArg)
 load("models/rfModel.rda")
 filepath = unlist(strsplit(fileArg, "="))[2]
 cat(paste("Running Recognition on: ", filepath))
-source("r_script_by_parts/WavParser.R")
+source("scripts/WavParser.R")
 data <- data.frame()
 row <- data.frame(filepath, 0, 0, 10)
 #row <- data.frame("Track.wav", 0, 0, 10)
