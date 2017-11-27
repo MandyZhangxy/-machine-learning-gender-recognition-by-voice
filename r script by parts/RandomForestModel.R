@@ -125,8 +125,20 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
         axis.title.y = element_text(face = "bold", size = 15))
 dev.off()
 
+### Demo of recognition during presentation:
+# sample is the data recorded in class.
+# Want to know if the voice is male or female.
+sample = test[1,-8]
+sample.pred = predict(trainingmodel,sample, type = "response")
+sample.pred
 
 
+sample2 = test[476,]
+sample.pred = predict(trainingmodel,sample2, type = "response")
+sample.pred
+
+
+which(test[,8] == "female")
 
 
 
