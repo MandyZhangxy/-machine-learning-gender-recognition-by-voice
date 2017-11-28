@@ -15,8 +15,8 @@ checkValidArg <- function(arg) {
 }
 
 #check input arguements
-args <- commandArgs(trailingOnly = TRUE);
-fileArg <- args[1];
+args <- commandArgs(trailingOnly = TRUE)
+fileArg <- args[1]
 checkValidArg(fileArg)
 
 # Run Recognition

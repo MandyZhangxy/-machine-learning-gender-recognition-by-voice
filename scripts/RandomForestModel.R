@@ -129,7 +129,7 @@ dev.off()
 
 ### Save Training Model For Later
 rfModel = trainingmodel;
-save(rfModel, file = "../models/rfModel.rda");
+save(rfModel, file = "../models/rfModel.rda")
 
 ### Demo of recognition during presentation:
 # sample is the data recorded in class.
