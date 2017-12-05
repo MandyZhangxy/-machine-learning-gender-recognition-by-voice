@@ -7,7 +7,9 @@ library(randomForest)
 
 # loading data
 setwd("/Users/jahuang/mandyproject/machine-learning-gender-recognition-by-voice/data")
-scaled_voice = read.csv("../data/scaled_voice.csv")
+#scaled_voice = read.csv("../data/scaled_voice.csv")
+voice = read.csv("../data/voice.csv")
+scaled_voice = voice
 head(scaled_voice)
 str(scaled_voice)
 
@@ -18,6 +20,7 @@ str(scaled_voice)
 # Seperating training and testing dataset: 
 # randomly select 70% train and 30% test groups:
 library(caTools)
+set.seed(1)
 ind = sample.split(Y = scaled_voice$label, SplitRatio = 0.7)
 train = scaled_voice[ind, ]
 test = scaled_voice[!ind, ]
@@ -80,7 +83,8 @@ ggplot(data = importance, aes(
   ggtitle("Importance of Variables in descending order") + 
   theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
         axis.title.x = element_text(face = "bold",size = 15, vjust = 1),
-        axis.title.y = element_text(face = "bold", size = 15))
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x=element_text(angle = -75, hjust = 0))
 
 dev.off()
 
@@ -92,8 +96,8 @@ test = test[ , names(test) %in% selected]
 trainingmodel = randomForest(label~., data = train, mtry = bestmry, ntree = 350)  
 
 # save data with selected variables for other models: KNN and Logistic regression:
-write.csv(test, file = "test.csv",row.names = FALSE)
-write.csv(train, file = "train.csv")
+write.csv(test, file = "../data/test.csv",row.names = FALSE)
+write.csv(train, file = "../data/train.csv")
  
 # predictions:
 predictionWithClass = predict(trainingmodel, test, type = "class")
@@ -130,21 +134,6 @@ dev.off()
 ### Save Training Model For Later
 rfModel = trainingmodel;
 save(rfModel, file = "../models/rfModel.rda")
-
-### Demo of recognition during presentation:
-# sample is the data recorded in class.
-# Want to know if the voice is male or female.
-sample = test[1,-8]
-sample.pred = predict(trainingmodel,sample, type = "response")
-sample.pred
-
-
-sample2 = test[476,]
-sample.pred = predict(trainingmodel,sample2, type = "response")
-sample.pred
-
-
-which(test[,8] == "female")
 
 
 

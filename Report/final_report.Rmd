@@ -1,0 +1,357 @@
+---
+title: "Gender Recognition by Voice"
+author: "Xinyu Zhang, Xiaochi Ge, Wenye Ouyang"
+date: "12/4/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,comment=NA)
+knitr::opts_chunk$set(fig.width=5, fig.height=3.5,fig.align='center') 
+```
+
+# I. Introduction
+Our SMART question is: How to use classification models to recognize gender by their voice? 
+
+The research is about how to recognize gender by voice. The dataset includes the measurement of each voice sample's auditory features which are based upon acoustic properties of the voice. The voice samplesa are pre-processed by acoustic analysis in R using the seewave and tuneR packages. 
+
+
+```{r echo = FALSE, warning=FALSE, message=FALSE}
+#install.packages("caTools")
+#install.packages("caret")
+#install.packages("e1071")
+#install.packages("pROC")
+#install.packages("randomForest", dependencies = FALSE)
+library(randomForest)
+library(ggplot2)
+library("caret")
+library("pROC")
+library(caTools)
+library(class)
+library(tidyr)
+library(dplyr)
+library("stats")
+```
+
+# II. Data information & Exploratory Data Analysis
+
+There are 21 features and one target variable `label`
+
+- duration: length of signal
+- meanfreq: mean frequency (in kHz)
+- sd: standard deviation of frequency
+-	median: median frequency (in kHz)
+-	Q25: first quantile (in kHz)
+-	Q75: third quantile (in kHz)
+-	IQR: interquantile range (in kHz)
+-	skew: skewness (see note in specprop description)
+-	kurt: kurtosis (see note in specprop description)
+-	sp.ent: spectral entropy
+-	sfm: spectral flatness
+-	mode: mode frequency
+-	centroid: frequency centroid (see specprop)
+-	peakf: peak frequency (frequency with highest energy)
+-	meanfun: average of fundamental frequency measured across acoustic signal
+-	minfun: minimum fundamental frequency measured across acoustic signal
+-	maxfun: maximum fundamental frequency measured across acoustic signal
+-	meandom: average of dominant frequency measured across acoustic signal
+-	mindom: minimum of dominant frequency measured across acoustic signal
+-	maxdom: maximum of dominant frequency measured across acoustic signal
+-	dfrange: range of dominant frequency measured across acoustic signal
+-	modindx: modulation index. Calculated as the accumulated absolute difference between adjacent measurements of fundamental frequencies divided by the frequency range
+- label: female and male. (This is target variable)
+
+
+
+
+Our dataset is about the voice of gender, therefore, we conduct a question that is about how to recognize gender through voice. For a better understanding of the dataset, we do some research on people's frequency of sound. 
+
+We searched online and find a voice dataset, which contains 3169 voice samples. Then, we decided to use three models (random forest, knn, and logistic) to compute the accuracy.
+
+We use confusion matrix and accuracy rate to determine which regression model is the highest. 
+
+
+
+```{r echo=FALSE, warning=FALSE}
+# Downloading the data
+voice = read.csv("../data/voice.csv")
+#scaled_voice = read.csv("../data/scaled_voice.csv")
+scaled_voice = voice
+
+#### eda:
+gender = voice %>% group_by(label)
+gender = gender %>% summarise(n=n())
+# bar plot
+ggplot(gender, aes(label, n, color = label, fill = label)) + geom_bar(stat = 'identity',alpha=0.3,width=0.5)+
+  geom_text(aes(label = n), vjust=-0.3, size = 2.3) +
+  labs(x = "Gender", y = "Count", size = 3) + ggtitle("Number of People in Each Gender") + theme_light()
+
+# distribution of feature:
+# install.packages("reshape")
+# Convert dataframe to key-value pairs
+pair = gather(voice[, 1:20])
+#plot distribution of all features
+ggplot(pair, aes(value)) + facet_wrap(~ key, scales = "free") + geom_density()+
+  labs(x = "feature in each column") + ggtitle("Density of all variables")+
+  theme(plot.title = element_text(face = "bold", size = 8, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 5),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) 
+
+# compare two variables:
+# modulation index and mean frequency:
+ggplot(voice, aes(x=modindx, y=meanfreq, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "Modulation Index", y = "Mean Frequency") + ggtitle("Modulation Index vs. Mean Frequency")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+# Skew and Kurtosis
+ggplot(voice, aes(skew, kurt, group=label)) + geom_line(aes(colour = label), size = 0.7,alpha=0.9) +
+  labs(x = "Skew", y = "Kurtosis", size = 3) + ggtitle("Skew vs. Kurtosis")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() + scale_color_hue(l=38, c=65)
+
+# SD vs. Mean Frequency
+ggplot(voice, aes(x=sd, y=meanfreq, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "Standard Deviation of Frequency", y = "Mean Frequency") + ggtitle("Standard Deviation vs. Mean Frequency")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+#Avg of Fundmental Frequency vs Mean Frequency
+ggplot(voice, aes(x=meanfun, y=meanfreq, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "Average of Fundmental Frequency", y = "Mean Frequency") + ggtitle("Average of Fundmental Frequency vs. Mean Frequency")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+#SD vs Avg of Fundamental Frenquency
+ggplot(voice, aes(x=meanfun, y=sd, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "Average of Fundmental Frequency", y = "Standard Deviation") + ggtitle("Average of Fundmental Frequency vs. Standard Deviation")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+#Q25 vs IQR
+ggplot(voice, aes(x=Q25, y=IQR, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "First Quantile", y = "Interquantile") + ggtitle("First Quantile vs. Interquantile")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+#spectral entropy vs spectral flatness
+ggplot(voice, aes(x=sp.ent, y=sfm, group=label)) + geom_point(aes(colour = label), size = 1,alpha=0.55) +
+  labs(x = "Spectral Entropy", y = "Spectral Flatness") + ggtitle("Spectral Entropy vs. Spectral Flatness")+
+  theme(plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 15),
+        axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
+
+```
+
+# III. Data Preprocessing
+## 1.Set trainning and testing
+
+- Randomly select 70% train and 30% test groups
+- After feature selections, we will only include selected features in training and testing.
+```{r echo=FALSE, warning=FALSE}
+# randomly select 70% train and 30% test groups:
+set.seed(1)
+ind = sample.split(Y = scaled_voice["label"], SplitRatio = 0.7)
+train = scaled_voice[ind, ]
+test = scaled_voice[-ind, ]
+```
+
+## 2.Feature selection
+Using Random Forest Importance to select features. 
+
+- First, use random forest model as classification
+- Second, in order to fit the model, want to find the best mtry (number of variabels selected at each split)
+- Third, according to plot of importance in the desending order, we select top 7 important features.
+
+```{r echo = FALSE, warning=FALSE}
+# First, use random forest model as classification
+# Second, Fitting the model:
+# to find the best mtry:
+train = data.frame(train)
+test= data.frame(test)
+bestmry = tuneRF(x = train[, -21], train$label, 
+                 ntreeTry = 300, stepFactor = 1.5, improve = 0.001,
+                 trace = TRUE, plot = TRUE, importance = TRUE)
+
+bestmry = data.frame(bestmry)
+bestmry = bestmry$mtry[which.min(bestmry$OOBError)]
+print(paste("Therefore, based on the plot above, the best number of variables at each split is", bestmry))
+
+trainingmodel = randomForest(label~., data = train, mtry = bestmry, ntree = 350)
+importance = data.frame(importance(trainingmodel))
+variables = rownames(importance)
+importance$variables = variables
+# plot 1
+varImpPlot(trainingmodel)
+
+```
+
+```{r eacho = FALSE, warning=FALSE }
+# plot 2 importances of feautres
+ggplot(data = importance, aes(
+  x = reorder(variables, -MeanDecreaseGini),
+  y = MeanDecreaseGini)) + geom_bar(stat = 'identity',fill = "#FF6666",alpha=0.75) + 
+  theme_light() + xlab("Variabels")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_text(aes(label = round(MeanDecreaseGini)), vjust=-0.3, size = 3)+
+  ggtitle("\n\nImportance of Variables in descending order") + 
+  theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 5),
+        axis.text.x=element_text(angle = -75, hjust = 0))
+
+# trim the train and test data frame with only selected variabels:
+selected = importance$variables[order(importance$MeanDecreaseGini, decreasing = T)[1:7]]
+selected = append(selected, "label")
+train = train[ , names(train) %in% selected]
+test = test[ , names(test) %in% selected]
+
+print("The selected features and the target variable are:")
+print(names(train))
+```
+
+
+# IV. Models Building
+
+## 1. Random Forest Classification
+
+- set parameters for random forest model
+- plot the ROC/AUC and confusion matrix
+
+```{r echo=FALSE, warning=FALSE}
+# retraining model with selected variabels according to importance:
+trainingmodel = randomForest(label~., data = train, mtry = bestmry, ntree = 350)  
+predictionWithClass = predict(trainingmodel, test, type = "class")
+t = table(predictions = predictionWithClass, actual = test$label)
+t
+
+# Accuracy metric/rate
+print("In this model, the accuracy rate is:")
+sum(diag(t))/sum(t)
+
+# plot roc/auc:
+predictionWithProbs = predict(trainingmodel, test, type = "prob")
+plot(roc(test$label, predictionWithProbs[ ,2]), main = "Random Forest AUC/ROC")
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+# ploting confusion matrix in ggplot:
+CM = confusionMatrix(predictionWithClass, test$label)
+print(CM)
+cm = as.data.frame(CM$table)
+ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) + 
+  geom_tile(aes(fill = Freq), color = "white") + 
+  scale_fill_gradient(low = "white", high = "#ffb5e9")  + 
+  geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
+  ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
+  theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 5))
+```
+Based on the confusion matrix, blablablabla.....
+
+
+## 2. K-Nearest Neighbour classification
+
+- set parameter k = 7
+- plot confusion matrix
+
+```{r echo = FALSE, warning=FALSE}
+knn_pred = knn(train = train[, -8], test = test[ ,-8], cl=train[, "label"], k=7, prob = TRUE)
+
+#plot ROC
+plot(roc(test$label,as.numeric(knn_pred)), main = "KNN AUC/ROC")
+
+print("The accuracy rate in KNN is:")
+sum(knn_pred == test[, 8])/length(test[,8])
+
+CM = confusionMatrix(knn_pred, test$label)
+print(CM)
+cm = as.data.frame(CM$table)
+ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) + 
+  geom_tile(aes(fill = Freq), color = "white") + 
+  scale_fill_gradient(low = "white", high = "#ffb5e9")  + 
+  geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
+  ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
+  theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 5))
+
+```
+
+## 3. Logistic Regression
+
+```{r echo = FALSE, warning=FALSE,fig.align='center'}
+
+numeric = ifelse(train$label == 'male',1,0)
+logitmodel<- glm(label~.,family = binomial(link =  "logit"), train,control = list(maxit = 50))
+summary(logitmodel)
+```
+
+Based on the summary table above, we find that blablablabla.....
+
+```{r}
+# based on summary, we select features with high significancy
+logitmodel2<- glm(label~IQR+sp.ent+sfm+meanfun,family = binomial(link =  "logit"), train,control = list(maxit = 50))
+summary(logitmodel2)
+```
+
+We can make conclusion based on the two summary above. blablablablablabal.......
+
+
+```{r}
+# predictions:
+predictionWithClass_lg = predict(logitmodel2, test[-8],  type='response')
+predictionWithClass_lg = ifelse(predictionWithClass_lg>0.5,1,0)
+t = table(predictions= predictionWithClass_lg, actual = test$label)
+t
+# Accuracy metric/rate
+sum(diag(t))/sum(t)
+
+# ploting ROC curve and calculating AUC metric
+plot(roc(test$label, predictionWithClass_lg), main = "AUC/ROC")
+
+
+# plot confusion matrix
+lg = predictionWithClass_lg
+lg = factor(lg, levels = c(0,1), labels = c("female", "male"))
+CM = confusionMatrix(lg, test$label)
+print(CM)
+cm = as.data.frame(CM$table)
+
+ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) + 
+  geom_tile(aes(fill = Freq), color = "white") + 
+  scale_fill_gradient(low = "white", high = "#ffb5e9")  + 
+  geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
+  ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
+  theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 5))
+
+```
+
+# V. Conclusion
+
+- The accuracy of all three models is over 96%
+
+- Gender can be recognized by voice. We have demo to show the gender recognition process during our presentation in class. 
+
+- After finish the major parts of the project, we are still curious about whether people???s disguised voice can be recognized or not. If we add some feigned voices into the dataset, we might get some different results
+
+
+
