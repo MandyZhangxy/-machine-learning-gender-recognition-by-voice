@@ -34,7 +34,8 @@ setwd("data")
 invisible(result <- specan3(data))
 setwd("..")
 
-selected = c( "meanfun","IQR","Q25","sd", "sp.ent","sfm", "meanfreq", "label" )
+
+selected = c( "meanfun","IQR","Q25","sd", "sp.ent","sfm", "mode", "label" )
 acoustics = result$acoustics
 sample = acoustics[ , names(acoustics) %in% selected]
 

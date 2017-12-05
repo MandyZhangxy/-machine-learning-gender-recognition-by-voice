@@ -35,7 +35,10 @@ library(stats)
 
 # II. Data information & Exploratory Data Analysis
 
-There are 21 features and one target variable `label`
+## 1. Data Information
+Our dataset is about the voice of gender, therefore, we conduct a question about how to recognize gender through voice. For a better understanding of the dataset, we do some research on people's frequency of sound. 
+
+We find the data on the website: [**Primary Objects**](http://www.primaryobjects.com/2016/06/22/identifying-the-gender-of-a-voice-using-machine-learning/) by *KORY BECKER*. In this dataset, it contains 3169 voice samples and 21 columns (our target variable is `label`). 
 
 - duration: length of signal
 - meanfreq: mean frequency (in kHz)
@@ -59,15 +62,19 @@ There are 21 features and one target variable `label`
 -	maxdom: maximum of dominant frequency measured across acoustic signal
 -	dfrange: range of dominant frequency measured across acoustic signal
 -	modindx: modulation index. Calculated as the accumulated absolute difference between adjacent measurements of fundamental frequencies divided by the frequency range
-- label: female and male. (This is target variable)
-
-Our dataset is about the voice of gender, therefore, we conduct a question that is about how to recognize gender through voice. For a better understanding of the dataset, we do some research on people's frequency of sound. 
-
-We searched online and find a voice dataset, which contains 3169 voice samples. Then, we decided to use three models (random forest, knn, and logistic) to compute the accuracy.
-
-We use confusion matrix and accuracy rate to determine which regression model is the highest. 
+- **label**: female and male. (This is **target** variable)
 
 
+We want to use three classification models to do the gender recognition:
+
+1. Random Forest
+2. K-Nearest Neighbour 
+3. Logistic Regression
+
+Finally, We use confusion matrix and highest accuracy rate to determine which classification model is the best. 
+
+
+## 2. Exploratory Data Analysis
 
 ```{r echo=FALSE, warning=FALSE}
 # Downloading the data
@@ -153,7 +160,7 @@ ggplot(voice, aes(x=sp.ent, y=sfm, group=label)) + geom_point(aes(colour = label
 ```
 
 # III. Data Preprocessing
-## 1.Set trainning and testing
+## 1.Set training and testing
 
 - Randomly select 70% train and 30% test groups
 - After feature selections, we will only include selected features in training and testing.
@@ -167,6 +174,7 @@ test = scaled_voice[-ind, ]
 
 ## 2.Feature selection
 ### Using Random Forest Importance to select features. 
+
 Forest error rate depends on two things:
 
 1. The correlation between any two trees in the forest. Increasing the correlation increases the forest error rate.
@@ -178,7 +186,7 @@ However, reducing m reduces both the correlation and the strength. Increasing it
 
 Therefore, for feature selection, we need to do two steps:
 
-1. find the best mtry(number of variabels selected at each split)
+1. Find the best mtry (number of variabels selected at each split)
 2. According to plot of importance in the desending order, we select top 7 important features.
 
 
@@ -277,8 +285,8 @@ The accuracy is in the 95% confidence interval with the p-value far smaller than
 
 ## 2. K-Nearest Neighbour classification
 
-- set parameter k = 7
-- plot confusion matrix
+- Set parameter k = 7. When k=7, compared to other k values, the accuracy reach the highest. 
+- Plot ROC/AUC and confusion matrix
 
 ```{r echo = FALSE, warning=FALSE}
 knn_pred = knn(train = train[, -8], test = test[ ,-8], cl=train[, "label"], k=7, prob = TRUE)
@@ -303,6 +311,11 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
 
 ```
 
+
+Based on the confusion matrix, there are 1549 samples are predicted correctly as females; however, there are 35 samples are predicted as male but actually they are female. There are 1552 samples are predicted correctly as males; however, there are 31 samples are predicted at female but they are in fact are male.
+
+The accuracy is 97.92% and is in the 95% confidence interval with the p-value far smaller than 0.05. Therefore, we can say that this accuracy is statistically significant. 
+
 ## 3. Logistic Regression
 
 ```{r echo = FALSE, warning=FALSE,fig.align='center'}
@@ -312,7 +325,7 @@ logitmodel<- glm(label~.,family = binomial(link =  "logit"), train,control = lis
 summary(logitmodel)
 ```
 
-Based on the summary table above, we find that blablablabla.....
+Based on the summary table above, we find that the P-values of `sd`, `Q25` and `centroid` are larger than 0.05, which means those variables are not significant. Therefore, we need to remove those variables in the next model.
 
 ```{r}
 # based on summary, we select features with high significancy
@@ -320,7 +333,14 @@ logitmodel2<- glm(label~IQR+sp.ent+sfm+meanfun,family = binomial(link =  "logit"
 summary(logitmodel2)
 ```
 
-We can make conclusion based on the two summary above. blablablablablabal.......
+From the second summary, we find that:
+
+1. all the variables in the table above are very sinificant since the p-values are far smaller than 0.05. 
+2. For every one unit increase in `IQR`, log odds of gender as female increases by 59.1 For every one unint increase in `sp.ent`,the log odds of fender as female increase by 53.995. For every one unit increase in `sfm`, the log odds of gender as female decrease 15.092 (more likely to be male). For every one unit increase in `meanfun`, the log odds of gender as female decrease 160.073 (more likely to be male).
+3. The Residual deviance increase from 610.18 to 613.01, which means the model is fitting good.
+4. The Deviance Residuals is symmetrically distributed at center, not skewed to the left or right.
+5. the AIC dropped from 626.18 to 623.01, which means the this model is fitting good as well.
+
 
 
 ```{r}
@@ -355,13 +375,21 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
 
 ```
 
+
+Based on the confusion matrix, there are 1527 samples are predicted correctly as females; however, there are 57 samples are predicted as male but actually they are female. There are 1543 samples are predicted correctly as males; however, there are 40 samples are predicted at female but they are in fact are male.
+
+The accuracy is 96.94% and is in the 95% confidence interval with the p-value far smaller than 0.05. Therefore, we can say that this accuracy is statistically significant. 
+
+
 # V. Conclusion
 
-- The accuracy of all three models is over 96%
+- The accuracy rates of all three models are over 96%, they are aloo doing good on prediction. Among these three, the random forest classification is the best, since its accuracy reachs 100%. Therefore, we will use random forest model to do gender recognition.
 
-- Gender can be recognized by voice. We have demo to show the gender recognition process during our presentation in class. 
+- Gender can be recognized by voice. We will do a demo in presentation to show the gender recognition processing in class. 
 
-- After finish the major parts of the project, we are still curious about whether people???s disguised voice can be recognized or not. If we add some feigned voices into the dataset, we might get some different results
+- After finishing the major parts of the project, we are still curious that what we can do next to make our machine smarter. What if people disguise their voice? What if we add some feigned voices into the dataset? Can this machine still do a good job? 
 
+- In the process of feature selection, there might be some better algorithms to do the dimention reduction such as principal component analysis (PCA) or independent component analysis (ICA). 
 
+- The 100% accurate rate in random forest is not true is real life. It is only suitible in the testing data set. If we add new sample, or make 10-fold cross validation, the accuracy rate will definitally not 100% and will be more 'accurate'.
 
