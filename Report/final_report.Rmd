@@ -24,13 +24,13 @@ The research is about how to recognize gender by voice. The dataset includes the
 #install.packages("randomForest", dependencies = FALSE)
 library(randomForest)
 library(ggplot2)
-library("caret")
-library("pROC")
+library(caret)
+library(pROC)
 library(caTools)
 library(class)
 library(tidyr)
 library(dplyr)
-library("stats")
+library(stats)
 ```
 
 # II. Data information & Exploratory Data Analysis
@@ -61,9 +61,6 @@ There are 21 features and one target variable `label`
 -	modindx: modulation index. Calculated as the accumulated absolute difference between adjacent measurements of fundamental frequencies divided by the frequency range
 - label: female and male. (This is target variable)
 
-
-
-
 Our dataset is about the voice of gender, therefore, we conduct a question that is about how to recognize gender through voice. For a better understanding of the dataset, we do some research on people's frequency of sound. 
 
 We searched online and find a voice dataset, which contains 3169 voice samples. Then, we decided to use three models (random forest, knn, and logistic) to compute the accuracy.
@@ -87,7 +84,6 @@ ggplot(gender, aes(label, n, color = label, fill = label)) + geom_bar(stat = 'id
   labs(x = "Gender", y = "Count", size = 3) + ggtitle("Number of People in Each Gender") + theme_light()
 
 # distribution of feature:
-# install.packages("reshape")
 # Convert dataframe to key-value pairs
 pair = gather(voice[, 1:20])
 #plot distribution of all features
@@ -154,7 +150,6 @@ ggplot(voice, aes(x=sp.ent, y=sfm, group=label)) + geom_point(aes(colour = label
         axis.title.x = element_text(face = "bold", size = 15, vjust = 1),
         axis.title.y = element_text(face = "bold", size = 15),
         axis.text.x = element_text(vjust = 0.1, hjust = 0.1)) + theme_light() +  scale_color_hue(l=38, c=65)
-
 ```
 
 # III. Data Preprocessing
@@ -171,11 +166,21 @@ test = scaled_voice[-ind, ]
 ```
 
 ## 2.Feature selection
-Using Random Forest Importance to select features. 
+### Using Random Forest Importance to select features. 
+Forest error rate depends on two things:
 
-- First, use random forest model as classification
-- Second, in order to fit the model, want to find the best mtry (number of variabels selected at each split)
-- Third, according to plot of importance in the desending order, we select top 7 important features.
+1. The correlation between any two trees in the forest. Increasing the correlation increases the forest error rate.
+2. The strength of each individual tree in the forest. 
+
+A tree with a low error rate is a strong classifier. Therefore, we want to increase the strength of the individual trees and decrease decreases the forest error rate.
+
+However, reducing m reduces both the correlation and the strength. Increasing it increases both. Somewhere in between is an "optimal" range of mtry - usually quite wide. Using the oob error rate (see  the plot below) can give a value of m in the range can quickly be found. 
+
+Therefore, for feature selection, we need to do two steps:
+
+1. find the best mtry(number of variabels selected at each split)
+2. According to plot of importance in the desending order, we select top 7 important features.
+
 
 ```{r echo = FALSE, warning=FALSE}
 # First, use random forest model as classification
@@ -207,7 +212,7 @@ ggplot(data = importance, aes(
   y = MeanDecreaseGini)) + geom_bar(stat = 'identity',fill = "#FF6666",alpha=0.75) + 
   theme_light() + xlab("Variabels")+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_text(aes(label = round(MeanDecreaseGini)), vjust=-0.3, size = 3)+
+  geom_text(aes(label = round(MeanDecreaseGini)), vjust=-0.3, size = 2.5)+
   ggtitle("\n\nImportance of Variables in descending order") + 
   theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
         axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
@@ -229,8 +234,8 @@ print(names(train))
 
 ## 1. Random Forest Classification
 
-- set parameters for random forest model
-- plot the ROC/AUC and confusion matrix
+- Set parameters for random forest model
+- Plot the ROC/AUC and confusion matrix
 
 ```{r echo=FALSE, warning=FALSE}
 # retraining model with selected variabels according to importance:
@@ -240,8 +245,8 @@ t = table(predictions = predictionWithClass, actual = test$label)
 t
 
 # Accuracy metric/rate
-print("In this model, the accuracy rate is:")
-sum(diag(t))/sum(t)
+print("In the Random Forest model, the accuracy rate is:")
+paste(round(sum(diag(t))/sum(t)*100,2),"%")
 
 # plot roc/auc:
 predictionWithProbs = predict(trainingmodel, test, type = "prob")
@@ -260,11 +265,15 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
   geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
   ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
   theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
-        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
-        axis.title.y = element_text(face = "bold", size = 5))
+        axis.title.x = element_text(face = "bold",size = 8, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 8))
 ```
-Based on the confusion matrix, blablablabla.....
 
+Based on the confusion matrix, there are 1584 samples are predicted as females and in the fact they are females; there are 1583 samples are predicted as males and in the fact they are males. Therefore, we can say that in the testing dataset, the prediction is 100% accurate. 
+
+The first segment of line in AUC is parallel to the y-axis and the angel of the left corner is 90 degree, which means that the area under curve is 100, and also means that this is a good model. 
+
+The accuracy is in the 95% confidence interval with the p-value far smaller than 0.05. Therefore, we can say that this accuracy is statistically significant. 
 
 ## 2. K-Nearest Neighbour classification
 
@@ -278,7 +287,7 @@ knn_pred = knn(train = train[, -8], test = test[ ,-8], cl=train[, "label"], k=7,
 plot(roc(test$label,as.numeric(knn_pred)), main = "KNN AUC/ROC")
 
 print("The accuracy rate in KNN is:")
-sum(knn_pred == test[, 8])/length(test[,8])
+paste(round(sum(knn_pred == test[, 8])/length(test[,8])*100,2),"%")
 
 CM = confusionMatrix(knn_pred, test$label)
 print(CM)
@@ -289,8 +298,8 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
   geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
   ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
   theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
-        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
-        axis.title.y = element_text(face = "bold", size = 5))
+        axis.title.x = element_text(face = "bold",size = 8, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 8))
 
 ```
 
@@ -321,7 +330,8 @@ predictionWithClass_lg = ifelse(predictionWithClass_lg>0.5,1,0)
 t = table(predictions= predictionWithClass_lg, actual = test$label)
 t
 # Accuracy metric/rate
-sum(diag(t))/sum(t)
+print("The accuracy rate in Logistic Regression is:")
+paste(round(sum(diag(t))/sum(t)*100,2),"%")
 
 # ploting ROC curve and calculating AUC metric
 plot(roc(test$label, predictionWithClass_lg), main = "AUC/ROC")
@@ -340,8 +350,8 @@ ggplot(data = cm, mapping = aes(x = Reference, y = Prediction)) +
   geom_text(aes(label = Freq),size = 7) + theme(legend.position = "none") + 
   ggtitle(paste("Confusion Matrix with Accuracy rate ", round(100*CM$overall[1],2), "%"))+
   theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
-        axis.title.x = element_text(face = "bold",size = 5, vjust = 1),
-        axis.title.y = element_text(face = "bold", size = 5))
+        axis.title.x = element_text(face = "bold",size = 8, vjust = 1),
+        axis.title.y = element_text(face = "bold", size = 8))
 
 ```
 
