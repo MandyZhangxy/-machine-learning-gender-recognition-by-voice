@@ -41,8 +41,8 @@ sample = acoustics[ , names(acoustics) %in% selected]
 
 print(sample)
 sample.pred = predict(rfModel,sample, type = "response")
-cat("\n\nVoice Recognition Result: \n")
-cat(as.character(sample.pred))
+cat("\n\nVoice Recognition Result: \n\n")
+cat(paste("Random Forest Model:",as.character(sample.pred)))
 cat("\n\n")
 
 options(warn=0)
